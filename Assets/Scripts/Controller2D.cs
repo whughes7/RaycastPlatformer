@@ -17,6 +17,8 @@ public class Controller2D : MonoBehaviour
 
     BoxCollider2D collider;
     RaycastOrigins raycastOrigins;
+    public CollisionInfo collisions;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -27,6 +29,7 @@ public class Controller2D : MonoBehaviour
     public void Move(Vector3 moveDistance)
     {
         UpdateRaycastOrigins();
+        collisions.Reset();
 
         if (moveDistance.x != 0)
         {
@@ -64,6 +67,9 @@ public class Controller2D : MonoBehaviour
                 // Set all ray lengths to the nearest hit ray
                 // Avoids clipping scenario
                 rayLength = hit.distance;
+
+                collisions.left = directionX == -1;
+                collisions.right = directionX == 1;
             }
             else
             {
@@ -97,6 +103,9 @@ public class Controller2D : MonoBehaviour
                 // Set all ray lengths to the nearest hit ray
                 // Avoids clipping scenario
                 rayLength = hit.distance;
+
+                collisions.below = directionY == -1;
+                collisions.above = directionY == 1;
             } else
             {
                 Debug.DrawRay(rayOrigin, Vector2.up * directionY * rayLength, Color.green, 0.01f);
@@ -131,5 +140,18 @@ public class Controller2D : MonoBehaviour
     {
         public Vector2 topLeft, topRight;
         public Vector2 bottomLeft, bottomRight;
+    }
+
+    // Used to remove the accumulation of gravity and collisions left/right
+    public struct CollisionInfo
+    {
+        public bool above, below;
+        public bool left, right;
+
+        public void Reset()
+        {
+            above = below = false;
+            left = right = false;
+        }
     }
 }
