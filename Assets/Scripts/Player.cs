@@ -32,6 +32,7 @@ public class Player : MonoBehaviour
     float accelerationTimeAirborne = 0.2f;
     float accelerationTimeGrounded = 0.1f;
     float velocityXSmoothing;
+    private float targetVelocityX;
 
     // Update Variables
     Vector3 velocity;
@@ -51,18 +52,6 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // Removes the accumulation of gravity
-        if (controller.collisions.above || controller.collisions.below)
-        {
-            velocity.y = 0;
-        }
-        
-        // Removes the continuous collision force left/right
-        if (controller.collisions.left || controller.collisions.right)
-        {
-            velocity.x = 0;
-        }
-
         if (Input.GetKeyDown(KeyCode.Space) && controller.collisions.below)
         {
             velocity.y = jumpVelocity;
@@ -87,14 +76,36 @@ public class Player : MonoBehaviour
 
         Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
 
-        float targetVelocityX = input.x * moveSpeed;
-        velocity.x = Mathf.SmoothDamp(
-            velocity.x, 
-            targetVelocityX,
-            ref velocityXSmoothing, 
-            (controller.collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborne);
-        velocity.y += gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
+        targetVelocityX = input.x * moveSpeed;
     }
 
+    void FixedUpdate()
+    {
+        // FixedUpdate fixedDeltaTime gives us a predictable error instead of variable error
+        // This is due to the fact that FixedUpdate, is well, fixed in terms of intervals between calls
+        // This is good if you account for the error when predicting maxHeightReached
+        // Note: I do not account for the error in this code, but rather showcase that it is there
+        velocity.x = Mathf.SmoothDamp(
+            velocity.x,
+            targetVelocityX,
+            ref velocityXSmoothing,
+            (controller.collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborne);
+        velocity.y += gravity * Time.fixedDeltaTime;
+        controller.Move(velocity * Time.fixedDeltaTime);
+
+        // NOTE: Must be moved from Update to FixedUpdate 
+        // otherwise velocity.y can be zeroed out before jump is even activated
+        // This is due to the fact that FixedUpdate is called less frequently than Update
+        // Removes the accumulation of gravity
+        if (controller.collisions.above || controller.collisions.below)
+        {
+            velocity.y = 0;
+        }
+
+        // Removes the continuous collision force left/right
+        if (controller.collisions.left || controller.collisions.right)
+        {
+            velocity.x = 0;
+        }
+    }
 }
