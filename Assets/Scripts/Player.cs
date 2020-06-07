@@ -20,6 +20,7 @@ public class Player : MonoBehaviour
     private float maxHeightReached = Mathf.NegativeInfinity;
     private float startHeight = Mathf.NegativeInfinity;
     private float velocityXSmoothing;
+    private float targetVelocityX;
     private bool reachedApex = true;
 
     float jumpForce;
@@ -51,6 +52,50 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            gravity = gravityDown;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Space) && controller.collisions.below)
+        {
+            Jump();
+        }
+
+        if (!reachedApex && maxHeightReached > transform.position.y)
+        {
+            float delta = maxHeightReached - startHeight;
+            float error = maxJumpHeight - delta;
+            Debug.Log("Jump Result: startHeight:" + Math.Round(startHeight, 4) + ", maxHeightReached:" + Math.Round(maxHeightReached, 4) + ", delta:" + Math.Round(delta, 4) + ", error:" + Math.Round(error, 4) + ", jumpTimer:" + jumpTimer + ", gravity:" + gravity + ", jumpForce:" + jumpForce + "\n\n");
+            reachedApex = true;
+            gravity = gravityDown;
+        }
+
+        maxHeightReached = Mathf.Max(transform.position.y, maxHeightReached);
+
+        Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+        targetVelocityX = input.x * moveSpeed;
+    }
+
+    void FixedUpdate()
+    {
+        if (!controller.collisions.below && !reachedApex)
+        {
+            jumpTimer += Time.fixedDeltaTime;
+        }
+
+        prevVelocity = velocity;
+
+        velocity.x = Mathf.SmoothDamp(
+            velocity.x,
+            targetVelocityX,
+            ref velocityXSmoothing,
+            (controller.collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborne);
+        velocity.y += gravity * Time.fixedDeltaTime;
+        Vector3 deltaPosition = (prevVelocity + velocity) * 0.5f * Time.fixedDeltaTime;
+        controller.Move(deltaPosition);
+
         // Removes the accumulation of gravity
         if (controller.collisions.above || controller.collisions.below)
         {
@@ -62,47 +107,6 @@ public class Player : MonoBehaviour
         {
             velocity.x = 0;
         }
-
-        Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-
-        if (Input.GetKeyDown(KeyCode.Space) && controller.collisions.below)
-        {
-            Jump();
-        }
-
-        if (Input.GetKeyUp(KeyCode.Space))
-        {
-            Debug.Log("min gravity"); 
-            gravity = gravityDown;
-        }
-
-        if (!controller.collisions.below && !reachedApex)
-        {
-            jumpTimer += Time.fixedDeltaTime;
-        }
-
-        if (!reachedApex && maxHeightReached > transform.position.y)
-        {
-            float delta = maxHeightReached - startHeight;
-            float error = maxJumpHeight - delta;
-            Debug.Log("Jump Result: startHeight:" + Math.Round(startHeight, 4) + ", maxHeightReached:" + Math.Round(maxHeightReached, 4) + ", delta:" + Math.Round(delta,4) + ", error:" + Math.Round(error, 4) + ", jumpTimer:" + jumpTimer + ", gravity:" + gravity + ", jumpForce:" + jumpForce +"\n\n");
-            reachedApex = true;
-            gravity = gravityDown;
-        }
-
-        maxHeightReached = Mathf.Max(transform.position.y, maxHeightReached);
-
-        prevVelocity = velocity;
-
-        float targetVelocityX = input.x * moveSpeed;
-        velocity.x = Mathf.SmoothDamp(
-            velocity.x,
-            targetVelocityX,
-            ref velocityXSmoothing,
-            (controller.collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborne);
-        velocity.y += gravity * Time.fixedDeltaTime;
-        Vector3 deltaPosition = (prevVelocity + velocity) * 0.5f * Time.fixedDeltaTime;
-        controller.Move(deltaPosition);
     }
 
     private void Jump()
