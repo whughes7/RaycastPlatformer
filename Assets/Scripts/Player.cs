@@ -7,32 +7,41 @@ using UnityEngine.UI;
 [RequireComponent (typeof (Controller2D))]
 public class Player : MonoBehaviour
 {
+    // Inspector Variables
+    [SerializeField] private float moveSpeed; //6f
     // Assign values to these to determine gravity and jumpVelocity
-    float jumpHeight = 4f;
-    float timeToJumpApex = 0.4f;
-
-    // Determined by the above two variables
-    float jumpVelocity;
-    float gravity;
-
-    float accelerationTimeAirborne = 0.2f;
-    float accelerationTimeGrounded = 0.1f;
-
-    float moveSpeed = 6f;
-    Vector3 velocity;
-    float velocityXSmoothing;
-
-    Controller2D controller;
+    [SerializeField] private float maxJumpHeight; //4f
+    [SerializeField] private float timeToJumpApex; //0.4f
 
     [SerializeField] private Text gravityText;
     [SerializeField] private Text jumpVelocityText;
+
+    // Start Variables
+    // Determined by maxJumpHeight, timeToJumpApex
+    Controller2D controller;
+    float jumpVelocity;
+    float gravity;
+
+    // Debugging Variables START
+    private bool reachedApex = true;
+    private float startHeight = Mathf.NegativeInfinity;
+    private float maxHeightReached = Mathf.NegativeInfinity;
+    // Debugging Variables END
+
+    // X Velocity Smoothing Variables
+    float accelerationTimeAirborne = 0.2f;
+    float accelerationTimeGrounded = 0.1f;
+    float velocityXSmoothing;
+
+    // Update Variables
+    Vector3 velocity;
 
     // Start is called before the first frame update
     void Start()
     {
         controller = GetComponent<Controller2D>();
 
-        gravity = -(2 * jumpHeight) / Mathf.Pow(timeToJumpApex, 2);
+        gravity = -(2 * maxJumpHeight) / Mathf.Pow(timeToJumpApex, 2);
         jumpVelocity = Mathf.Abs(gravity) * timeToJumpApex;
 
         gravityText.text = gravity.ToString();
@@ -54,12 +63,29 @@ public class Player : MonoBehaviour
             velocity.x = 0;
         }
 
-        Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-
         if (Input.GetKeyDown(KeyCode.Space) && controller.collisions.below)
         {
             velocity.y = jumpVelocity;
+
+            // Used only for debugging info START
+            startHeight = transform.position.y;
+            maxHeightReached = Mathf.NegativeInfinity;
+            reachedApex = false;
+            // Used only for debugging info END
         }
+
+        // Used only for debugging info START
+        if (!reachedApex && maxHeightReached > transform.position.y)
+        {
+            float delta = maxHeightReached - startHeight;
+            float error = maxJumpHeight - delta;
+            Debug.Log("Jump Result: startHeight:" + Math.Round(startHeight, 4) + ", maxHeightReached:" + Math.Round(maxHeightReached, 4) + ", delta:" + Math.Round(delta, 4) + ", error:" + Math.Round(error, 4) + ", timeToJumpApex:" + timeToJumpApex + ", gravity:" + gravity + ", jumpVelocity:" + jumpVelocity + "\n\n");
+            reachedApex = true;
+        }
+        maxHeightReached = Mathf.Max(transform.position.y, maxHeightReached);
+        // Used only for debugging info END
+
+        Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
 
         float targetVelocityX = input.x * moveSpeed;
         velocity.x = Mathf.SmoothDamp(
@@ -70,4 +96,5 @@ public class Player : MonoBehaviour
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
     }
+
 }
