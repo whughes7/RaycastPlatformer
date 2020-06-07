@@ -26,20 +26,15 @@ public class Player : MonoBehaviour
     private float jumpForce;
     private float gravity;
 
-
-    // Used only for debugging info (Except for OPTIONAL FEATURE: Faster falling section) START
-    private float maxHeightReached = Mathf.NegativeInfinity;
-    private float startHeight = Mathf.NegativeInfinity;
-    // OPTIONAL FEATURE: Faster falling
-    private bool reachedApex = true;
-    // Used only for debugging info (Except for OPTIONAL FEATURE: Faster falling section) START
-
     // X Velocity Smoothing Variables
     private float velocityXSmoothing;
     private float targetVelocityX;
 
-    // OPTIONAL FEATURE: Faster falling
-    //private float gravityDown;
+    // Faster Falling Variables
+    private float gravityDown;
+    private bool reachedApex = true;
+    private float maxHeightReached = Mathf.NegativeInfinity;
+    private float startHeight = Mathf.NegativeInfinity;
 
     // Update Variables
     private float jumpTimer = 0;
@@ -52,8 +47,7 @@ public class Player : MonoBehaviour
         controller = GetComponent<Controller2D>();
 
         gravity = -2 * maxJumpHeight / Mathf.Pow(timeToJumpApex, 2);
-        // OPTIONAL FEATURE: Faster falling
-        //gravityDown = gravity * 2;
+        gravityDown = gravity * 2;
 
         jumpForce = 2 * maxJumpHeight / timeToJumpApex;
 
@@ -66,29 +60,35 @@ public class Player : MonoBehaviour
     void Update()
     {
 
-        // OPTIONAL FEATURE: Faster falling
-        //if (Input.GetKeyUp(KeyCode.Space))
-        //{
-        //    gravity = gravityDown;
-        //}
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            gravity = gravityDown;
+        }
 
         if (Input.GetKeyDown(KeyCode.Space) && controller.collisions.below)
         {
             Jump();
         }
 
-        // Used only for debugging info (Except for OPTIONAL FEATURE: Faster falling section) START
         if (!reachedApex && maxHeightReached > transform.position.y)
         {
+            // Used ONLY for Debugging
             float delta = maxHeightReached - startHeight;
             float error = maxJumpHeight - delta;
-            Debug.Log("Jump Result: startHeight:" + Math.Round(startHeight, 4) + ", maxHeightReached:" + Math.Round(maxHeightReached, 4) + ", delta:" + Math.Round(delta, 4) + ", error:" + Math.Round(error, 4) + ", jumpTimer:" + jumpTimer + ", gravity:" + gravity + ", jumpForce:" + jumpForce + "\n\n");
+            // There is no error calculation when jump is not full. Aka, space bar is lifted up before reaching apex
+            if (gravity != gravityDown)
+            {
+                Debug.Log("Jump Result: startHeight:" + Math.Round(startHeight, 4) + ", maxHeightReached:" + Math.Round(maxHeightReached, 4) + ", delta:" + Math.Round(delta, 4) + ", error:" + Math.Round(error, 4) + ", jumpTimer:" + jumpTimer + ", gravity:" + gravity + ", jumpForce:" + jumpForce + "\n\n");
+            } 
+            else
+            {
+                Debug.Log("Jump Result: startHeight:" + Math.Round(startHeight, 4) + ", delta:" + Math.Round(delta, 4) + ", jumpTimer:" + jumpTimer + ", gravity:" + gravity + ", jumpForce:" + jumpForce + "\n\n");
+            }
+
             reachedApex = true;
-            // OPTIONAL FEATURE: Faster falling
-            //gravity = gravityDown;
+            gravity = gravityDown;
         }
         maxHeightReached = Mathf.Max(transform.position.y, maxHeightReached);
-        // Used only for debugging info (Except for OPTIONAL FEATURE: Faster falling section) END
 
 
         Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
@@ -134,14 +134,10 @@ public class Player : MonoBehaviour
         jumpTimer = 0;
         velocity.y = jumpForce;
 
-
-        // Used only for debugging info (Except for OPTIONAL FEATURE: Faster falling section) START
+        // Used for faster falling
+        gravity = -2 * maxJumpHeight / Mathf.Pow(timeToJumpApex, 2);
+        reachedApex = false;
         maxHeightReached = Mathf.NegativeInfinity;
         startHeight = transform.position.y;
-        reachedApex = false; // NOTE: If using optional feature. Don't have two reachedApex = false; parts
-        // OPTIONAL FEATURE: Faster falling
-        //gravity = -2 * maxJumpHeight / Mathf.Pow(timeToJumpApex, 2);
-        //reachedApex = false;
-        // Used only for debugging info (Except for OPTIONAL FEATURE: Faster falling section) START
     }
 }
