@@ -8,7 +8,7 @@ using UnityEngine.UI;
 public class Player : MonoBehaviour
 {
     // Assign values to these to determine gravity and jumpVelocity
-    float jumpHeight = 2f;
+    float jumpHeight = 4f;
     float timeToJumpApex = 0.4f;
 
     // Determined by the above two variables
