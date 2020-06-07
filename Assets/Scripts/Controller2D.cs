@@ -6,23 +6,31 @@ using UnityEngine;
 public class Controller2D : MonoBehaviour
 {
     // Inspector Variables
-    [SerializeField] private int horizontalRayCount; // 4
-    [SerializeField] private int verticalRayCount; // 4
-    [SerializeField] private float maxClimbAngle; // 80f
-    [SerializeField] private float maxDescendAngle; // 75f
+    [SerializeField] private int horizontalRayCount = 4; // 4
+    [SerializeField] private int verticalRayCount = 4; // 4
+    [SerializeField] private float maxClimbAngle = 80f; // 80f
+    [SerializeField] private float maxDescendAngle = 75f; // 75f
     // Used to determine which objects to collide with
     [SerializeField] private LayerMask collisionMask;
+    public LayerMask CollisionMask { get { return collisionMask; } set { collisionMask = value; } }
 
     private float horizontalRaySpacing;
     private float verticalRaySpacing;
 
-    private BoxCollider2D collider; 
+    new private BoxCollider2D collider; 
     private RaycastOrigins raycastOrigins;
 
     private CollisionInfo collisions;
     public CollisionInfo Collisions { get { return collisions; } }
 
     private const float skinWidth = 0.015f; // 0.015f
+
+    public static Controller2D CreateController(GameObject playerObj, LayerMask collisionMask)
+    {
+        Controller2D controller = playerObj.AddComponent<Controller2D>();
+        controller.collisionMask = collisionMask;
+        return controller;
+    }
 
     // Start is called before the first frame update
     void Start()

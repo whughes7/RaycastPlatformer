@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEditor.U2D.Path.GUIFramework;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,19 +8,20 @@ using UnityEngine.UI;
 public class Player : MonoBehaviour
 {
     // Inspector Variables
-    [SerializeField] private float moveSpeed; // 6f
+    [SerializeField] private float moveSpeed = 6f; // 6f
     // Assign values to these to determine gravity and jumpVelocity
-    [SerializeField] private float maxJumpHeight; // 4f
-    [SerializeField] private float timeToJumpApex; // 0.4f
+    [SerializeField] private float maxJumpHeight = 4f; // 4f
+    [SerializeField] private float timeToJumpApex = 0.4f; // 0.4f
     // X Velocity Smoothing Variables
-    [SerializeField] private float accelerationTimeAirborne; // 0.2f
-    [SerializeField] private float accelerationTimeGrounded; // 0.1f
+    [SerializeField] private float accelerationTimeAirborne = 0.2f; // 0.2f
+    [SerializeField] private float accelerationTimeGrounded = 0.1f; // 0.1f
 
-    [SerializeField] private Text gravityText;
-    [SerializeField] private Text jumpVelocityText;
+    //[SerializeField] private Text gravityText = null;
+    //[SerializeField] private Text jumpVelocityText = null;
 
     // Start Variables
     Controller2D controller;
+
     // Determined by maxJumpHeight, timeToJumpApex
     private float jumpForce;
     private float gravity;
@@ -41,6 +41,14 @@ public class Player : MonoBehaviour
     Vector3 velocity;
     Vector3 prevVelocity;
 
+    // Utility for Unit Tests
+    public static Player CreatePlayer(GameObject playerObj, Controller2D controller)
+    {
+        Player player = playerObj.AddComponent<Player>();
+        player.controller = controller;
+        return player;
+    }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -51,8 +59,8 @@ public class Player : MonoBehaviour
 
         jumpForce = 2 * maxJumpHeight / timeToJumpApex;
 
-        gravityText.text = gravity.ToString();
-        jumpVelocityText.text = jumpForce.ToString();
+        //gravityText.text = gravity.ToString();
+        //jumpVelocityText.text = jumpForce.ToString();
     }
 
     // Input dependent variables should be checked here because
