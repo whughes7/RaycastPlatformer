@@ -65,7 +65,7 @@ public class Player : MonoBehaviour
             gravity = gravityDown;
         }
 
-        if (Input.GetKeyDown(KeyCode.Space) && controller.collisions.below)
+        if (Input.GetKeyDown(KeyCode.Space) && controller.Collisions.below)
         {
             Jump();
         }
@@ -76,14 +76,8 @@ public class Player : MonoBehaviour
             float delta = maxHeightReached - startHeight;
             float error = maxJumpHeight - delta;
             // There is no error calculation when jump is not full. Aka, space bar is lifted up before reaching apex
-            if (gravity != gravityDown)
-            {
-                Debug.Log("Jump Result: startHeight:" + Math.Round(startHeight, 4) + ", maxHeightReached:" + Math.Round(maxHeightReached, 4) + ", delta:" + Math.Round(delta, 4) + ", error:" + Math.Round(error, 4) + ", jumpTimer:" + jumpTimer + ", gravity:" + gravity + ", jumpForce:" + jumpForce + "\n\n");
-            } 
-            else
-            {
-                Debug.Log("Jump Result: startHeight:" + Math.Round(startHeight, 4) + ", delta:" + Math.Round(delta, 4) + ", jumpTimer:" + jumpTimer + ", gravity:" + gravity + ", jumpForce:" + jumpForce + "\n\n");
-            }
+            Debug.Log("Jump Result: startHeight:" + Math.Round(startHeight, 4) + ", maxHeightReached:" + Math.Round(maxHeightReached, 4) + ", delta:" + Math.Round(delta, 4) + ", error:" + Math.Round(error, 4) + ", jumpTimer:" + jumpTimer + ", gravity:" + gravity + ", jumpForce:" + jumpForce + "\n\n");
+
 
             reachedApex = true;
             gravity = gravityDown;
@@ -100,7 +94,7 @@ public class Player : MonoBehaviour
     // independence from FPS and maintians predictability/reliability across multiple devices
     void FixedUpdate()
     {
-        if (!controller.collisions.below && !reachedApex)
+        if (!controller.Collisions.below && !reachedApex)
         {
             jumpTimer += Time.fixedDeltaTime;
         }
@@ -111,22 +105,22 @@ public class Player : MonoBehaviour
             velocity.x,
             targetVelocityX,
             ref velocityXSmoothing,
-            (controller.collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborne);
+            (controller.Collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborne);
         velocity.y += gravity * Time.fixedDeltaTime;
         Vector3 deltaPosition = (prevVelocity + velocity) * 0.5f * Time.fixedDeltaTime;
         controller.Move(deltaPosition);
 
         // Removes the accumulation of gravity
-        if (controller.collisions.above || controller.collisions.below)
+        if (controller.Collisions.above || controller.Collisions.below)
         {
             velocity.y = 0;
         }
 
-        // Removes the continuous collision force left/right
-        if (controller.collisions.left || controller.collisions.right)
-        {
-            velocity.x = 0;
-        }
+        //// Removes the continuous collision force left/right
+        //if (controller.Collisions.left || controller.Collisions.right)
+        //{
+        //    velocity.x = 0;
+        //}
     }
 
     private void Jump()

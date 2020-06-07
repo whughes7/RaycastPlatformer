@@ -5,19 +5,23 @@ using UnityEngine;
 [RequireComponent (typeof (BoxCollider2D))]
 public class Controller2D : MonoBehaviour
 {
+    // Inspector Variables
+    [SerializeField] private int horizontalRayCount; // 4
+    [SerializeField] private int verticalRayCount; // 4
+    [SerializeField] private float maxClimbAngle; // 80f
     // Used to determine which objects to collide with
-    public LayerMask collisionMask;
+    [SerializeField] private LayerMask collisionMask;
 
-    const float skinWidth = 0.015f;
-    public int horizontalRayCount = 4;
-    public int verticalRayCount = 4;
+    private float horizontalRaySpacing;
+    private float verticalRaySpacing;
 
-    float horizontalRaySpacing;
-    float verticalRaySpacing;
+    private BoxCollider2D collider; 
+    private RaycastOrigins raycastOrigins;
 
-    BoxCollider2D collider;
-    RaycastOrigins raycastOrigins;
-    public CollisionInfo collisions;
+    private CollisionInfo collisions;
+    public CollisionInfo Collisions { get { return collisions; } }
+
+    private const float skinWidth = 0.015f; // 0.015f
 
     // Start is called before the first frame update
     void Start()
@@ -61,15 +65,47 @@ public class Controller2D : MonoBehaviour
             // Set x moveDistance to amount needed to move from current position to the point which the ray collided with obstacle
             if (hit)
             {
+                // Handle slopes
+                float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
+                if (i == 0 && slopeAngle <= maxClimbAngle)
+                {
+                    float distanceToSlopeStart = 0;
+
+                    // Starting to climb new slope
+                    if (slopeAngle != collisions.slopeAngleOld)
+                    {
+                        // Setup moveDistance for ClimbSlope so that
+                        // ClimbSlope uses the x value once it actually reaches the slope
+                        distanceToSlopeStart = hit.distance - skinWidth;
+                        moveDistance.x -= distanceToSlopeStart * directionX;
+                    }
+                    ClimbSlope(ref moveDistance, slopeAngle);
+                    moveDistance.x += distanceToSlopeStart * directionX;
+                }
+
                 Debug.DrawRay(rayOrigin, Vector2.right * directionX * rayLength, Color.red, 0.01f);
 
-                moveDistance.x = (hit.distance - skinWidth) * directionX;
-                // Set all ray lengths to the nearest hit ray
-                // Avoids clipping scenario
-                rayLength = hit.distance;
+                // If climbing slope, don't check the rest of the rays for collisions
+                if (!collisions.climbingSlope || slopeAngle > maxClimbAngle)
+                {
+                    // Reduce moveDistance so that we don't go through collision
+                    moveDistance.x = (hit.distance - skinWidth) * directionX;
 
-                collisions.left = directionX == -1;
-                collisions.right = directionX == 1;
+                    // Set all ray lengths to the nearest hit ray
+                    // Avoids clipping scenario
+                    rayLength = hit.distance;
+
+                    // Update moveDistance on y axis
+                    // Avoids spurradic jittery horizontal collision while going up slope
+                    // Set y such that, we are still on the slope AFTER we move with the above x distance
+                    if (collisions.climbingSlope)
+                    {
+                        moveDistance.y = Mathf.Tan(collisions.slopeAngle * Mathf.Deg2Rad) * Mathf.Abs(moveDistance.x);
+                    }
+
+                    collisions.left = directionX == -1;
+                    collisions.right = directionX == 1;
+                }
             }
             else
             {
@@ -99,10 +135,26 @@ public class Controller2D : MonoBehaviour
             {
                 Debug.DrawRay(rayOrigin, Vector2.up * directionY * rayLength, Color.red, 0.01f);
 
+                // Reduce moveDistance so that we don't go through collision
                 moveDistance.y = (hit.distance - skinWidth) * directionY;
+
                 // Set all ray lengths to the nearest hit ray
                 // Avoids clipping scenario
                 rayLength = hit.distance;
+
+                // Update moveDistance on y axis
+                // Avoids spurradic jittery horizontal collision while going up slope
+                // Set y such that, we are still on the slope AFTER we move with the above x distance
+                if (collisions.climbingSlope)
+                {
+                    // Known: theta, y
+                    // Unknown: x
+                    // tan(theta) = y/x
+                    // x * tan(theta) = y
+                    // x = y / tan(theta)
+                    // Note: * Mathf.Sign(moveDistance.x) is to keep our direction
+                    moveDistance.x = moveDistance.y / Mathf.Tan(collisions.slopeAngle * Mathf.Deg2Rad) * Mathf.Sign(moveDistance.x);
+                }
 
                 collisions.below = directionY == -1;
                 collisions.above = directionY == 1;
@@ -110,6 +162,22 @@ public class Controller2D : MonoBehaviour
             {
                 Debug.DrawRay(rayOrigin, Vector2.up * directionY * rayLength, Color.green, 0.01f);
             }
+        }
+    }
+
+    private void ClimbSlope(ref Vector3 moveDistance, float slopeAngle)
+    {
+        float slopeMoveDistance = Mathf.Abs(moveDistance.x);
+        float climbVelocityY = Mathf.Sin(slopeAngle * Mathf.Deg2Rad) * slopeMoveDistance;
+        
+        if (moveDistance.y <= climbVelocityY)
+        {
+            moveDistance.y = climbVelocityY;
+            moveDistance.x = Mathf.Cos(slopeAngle * Mathf.Deg2Rad) * slopeMoveDistance * Mathf.Sign(moveDistance.x);
+            collisions.climbingSlope = true;
+            collisions.slopeAngle = slopeAngle;
+            // Allow jump
+            collisions.below = true;
         }
     }
 
@@ -148,10 +216,16 @@ public class Controller2D : MonoBehaviour
         public bool above, below;
         public bool left, right;
 
+        public bool climbingSlope;
+        public float slopeAngle, slopeAngleOld;
+
         public void Reset()
         {
             above = below = false;
             left = right = false;
+            climbingSlope = false;
+            slopeAngleOld = slopeAngle;
+            slopeAngle = 0;
         }
     }
 }
