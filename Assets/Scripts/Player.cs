@@ -9,6 +9,7 @@ public class Player : MonoBehaviour
 {
     // Inspector Variables
     [SerializeField] private float moveSpeed = 6f; // 6f
+    public float MoveSpeed { get { return moveSpeed; } }
     // Assign values to these to determine gravity and jumpVelocity
     [SerializeField] private float maxJumpHeight = 4f; // 4f
     [SerializeField] private float timeToJumpApex = 0.4f; // 0.4f
@@ -16,30 +17,18 @@ public class Player : MonoBehaviour
     [SerializeField] private float accelerationTimeAirborne = 0.2f; // 0.2f
     [SerializeField] private float accelerationTimeGrounded = 0.1f; // 0.1f
 
+
+
     //[SerializeField] private Text gravityText = null;
     //[SerializeField] private Text jumpVelocityText = null;
 
     // Start Variables
-    Controller2D controller;
+    public Controller2D controller;
+    public Movement movement;
 
-    // Determined by maxJumpHeight, timeToJumpApex
-    private float jumpForce;
-    private float gravity;
+    // Interfaces
+    public IUnityService UnityService;
 
-    // X Velocity Smoothing Variables
-    private float velocityXSmoothing;
-    private float targetVelocityX;
-
-    // Faster Falling Variables
-    private float gravityDown;
-    private bool reachedApex = true;
-    private float maxHeightReached = Mathf.NegativeInfinity;
-    private float startHeight = Mathf.NegativeInfinity;
-
-    // Update Variables
-    private float jumpTimer = 0;
-    Vector3 velocity;
-    Vector3 prevVelocity;
 
     // Utility for Unit Tests
     public static Player CreatePlayer(GameObject playerObj, Controller2D controller)
@@ -53,11 +42,16 @@ public class Player : MonoBehaviour
     void Start()
     {
         controller = GetComponent<Controller2D>();
+        movement = new Movement(
+            moveSpeed, 
+            maxJumpHeight, 
+            timeToJumpApex,
+            accelerationTimeAirborne,
+            accelerationTimeGrounded
+            );
 
-        gravity = -2 * maxJumpHeight / Mathf.Pow(timeToJumpApex, 2);
-        gravityDown = gravity * 2;
-
-        jumpForce = 2 * maxJumpHeight / timeToJumpApex;
+        if (UnityService == null)
+            UnityService = new UnityService();
 
         //gravityText.text = gravity.ToString();
         //jumpVelocityText.text = jumpForce.ToString();
@@ -67,34 +61,20 @@ public class Player : MonoBehaviour
     // Update is called more frequently than FixedUpdate()
     void Update()
     {
-
-        if (Input.GetKeyUp(KeyCode.Space))
+        if (UnityService.GetKeyUp(KeyCode.Space))
         {
-            gravity = gravityDown;
+            movement.DoubleGravity();
         }
 
-        if (Input.GetKeyDown(KeyCode.Space) && controller.Collisions.below)
+        if (UnityService.GetKeyDown(KeyCode.Space) && controller.Collisions.below)
         {
-            Jump();
+            movement.Jump(transform.position.y);
         }
 
-        if (!reachedApex && maxHeightReached > transform.position.y)
-        {
-            // Used ONLY for Debugging
-            float delta = maxHeightReached - startHeight;
-            float error = maxJumpHeight - delta;
-            // There is no error calculation when jump is not full. Aka, space bar is lifted up before reaching apex
-            Debug.Log("Jump Result: startHeight:" + Math.Round(startHeight, 4) + ", maxHeightReached:" + Math.Round(maxHeightReached, 4) + ", delta:" + Math.Round(delta, 4) + ", error:" + Math.Round(error, 4) + ", jumpTimer:" + jumpTimer + ", gravity:" + gravity + ", jumpForce:" + jumpForce + "\n\n");
+        movement.CalculateUpdate(
+                UnityService.GetAxisRaw("Horizontal"),
+                transform.position.y);
 
-
-            reachedApex = true;
-            gravity = gravityDown;
-        }
-        maxHeightReached = Mathf.Max(transform.position.y, maxHeightReached);
-
-
-        Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-        targetVelocityX = input.x * moveSpeed;
     }
 
     // Movement and Physics dependent variables should exist here because
@@ -102,26 +82,22 @@ public class Player : MonoBehaviour
     // independence from FPS and maintians predictability/reliability across multiple devices
     void FixedUpdate()
     {
-        if (!controller.Collisions.below && !reachedApex)
+        if (!controller.Collisions.below && !movement.ReachedApex)
         {
-            jumpTimer += Time.fixedDeltaTime;
+            movement.DeltaTime += UnityService.GetFixedDeltaTime();
         }
 
-        prevVelocity = velocity;
-
-        velocity.x = Mathf.SmoothDamp(
-            velocity.x,
-            targetVelocityX,
-            ref velocityXSmoothing,
-            (controller.Collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborne);
-        velocity.y += gravity * Time.fixedDeltaTime;
-        Vector3 deltaPosition = (prevVelocity + velocity) * 0.5f * Time.fixedDeltaTime;
-        controller.Move(deltaPosition);
+        controller.Move(
+            movement.CalculateDeltaPosition(
+                    (controller.Collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborne,
+                    UnityService.GetFixedDeltaTime()
+                )
+            );
 
         // Removes the accumulation of gravity
         if (controller.Collisions.above || controller.Collisions.below)
         {
-            velocity.y = 0;
+            movement.ZeroVelocityY();
         }
 
         //// Removes the continuous collision force left/right
@@ -129,17 +105,5 @@ public class Player : MonoBehaviour
         //{
         //    velocity.x = 0;
         //}
-    }
-
-    private void Jump()
-    {
-        jumpTimer = 0;
-        velocity.y = jumpForce;
-
-        // Used for faster falling
-        gravity = -2 * maxJumpHeight / Mathf.Pow(timeToJumpApex, 2);
-        reachedApex = false;
-        maxHeightReached = Mathf.NegativeInfinity;
-        startHeight = transform.position.y;
     }
 }

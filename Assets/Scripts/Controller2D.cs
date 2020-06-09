@@ -24,6 +24,7 @@ public class Controller2D : MonoBehaviour
     public CollisionInfo Collisions { get { return collisions; } }
 
     private const float skinWidth = 0.015f; // 0.015f
+    public float SkinWidth { get { return skinWidth; } }
 
     public static Controller2D CreateController(GameObject playerObj, LayerMask collisionMask)
     {
@@ -79,7 +80,7 @@ public class Controller2D : MonoBehaviour
             // Set x moveDistance to amount needed to move from current position to the point which the ray collided with obstacle
             if (hit)
             {
-                // Handle slopes
+                //// Handle slopes
                 float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
                 if (i == 0 && slopeAngle <= maxClimbAngle)
                 {
@@ -108,6 +109,7 @@ public class Controller2D : MonoBehaviour
                 Debug.DrawRay(rayOrigin, Vector2.right * directionX * rayLength, Color.red, 0.01f);
 
                 // If climbing slope, don't check the rest of the rays for collisions
+                // Note: slopeAngle = 90 when colliding on box while going up slope
                 if (!collisions.climbingSlope || slopeAngle > maxClimbAngle)
                 {
                     // Reduce moveDistance so that we don't go through collision
