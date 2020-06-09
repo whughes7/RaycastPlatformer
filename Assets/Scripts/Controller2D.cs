@@ -22,7 +22,7 @@ public class Controller2D : RaycastController
         return controller;
     }
 
-    public void Move(Vector3 moveDistance)
+    public void Move(Vector3 moveDistance, bool standingOnPlatform = false)
     {
         UpdateRaycastOrigins();
         collisions.Reset();
@@ -42,6 +42,12 @@ public class Controller2D : RaycastController
         }
 
         transform.Translate(moveDistance);
+
+        if (standingOnPlatform == true)
+        {
+            collisions.below = true;
+        }
+
     }
 
     // Changes in this method effect moveDistance Move method
@@ -60,8 +66,12 @@ public class Controller2D : RaycastController
 
 
             // Set x moveDistance to amount needed to move from current position to the point which the ray collided with obstacle
-            if (hit)
+            // Edge Case 1: hit.distance != 0 ensures movement not blocked by moving platform 
+            if (hit && hit.distance != 0)
             {
+
+
+
                 //// Handle slopes
                 float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
                 if (i == 0 && slopeAngle <= maxClimbAngle)
@@ -95,6 +105,8 @@ public class Controller2D : RaycastController
                 if (!collisions.climbingSlope || slopeAngle > maxClimbAngle)
                 {
                     // Reduce moveDistance so that we don't go through collision
+                    // Edge Case 1: If inside platform, hit.distance = 0. Therefore SkinWidth * directionX would 
+                    // Edge Case 1: result in a small amount of movement opposite the input direction
                     moveDistance.x = (hit.distance - SkinWidth) * directionX;
 
                     // Set all ray lengths to the nearest hit ray
