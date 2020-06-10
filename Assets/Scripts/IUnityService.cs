@@ -18,7 +18,7 @@ public class UnityService : IUnityService
 
     public float GetFixedDeltaTime()
     {
-        return Time.fixedDeltaTime;
+        return Time.deltaTime;
     }
 
     public float GetDeltaTime()

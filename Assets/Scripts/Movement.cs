@@ -23,10 +23,6 @@ public class Movement
     private float velocityXSmoothing;
     private float targetVelocityX;
 
-    // Acceleration
-    private float accelerationTimeAirborne;
-    private float accelerationTimeGrounded;
-
     // Faster Falling Variables
     private float gravityDown;
     private bool reachedApex = true;
@@ -34,17 +30,37 @@ public class Movement
     private float maxHeightReached = Mathf.NegativeInfinity;
     private float startHeight = Mathf.NegativeInfinity;
 
+    // Wall Jump Variables
+    private float wallSlideSpeedMax;
+    private float wallStickTime;
+    private float timeToWallUnstick = 0;
+    private Vector2 wallJumpClimb;
+    private Vector2 wallJumpOff;
+    private Vector2 wallLeap;
+
     // Update Variables
     private float deltaTime = 0;
     public float DeltaTime { get { return deltaTime; } set { value = deltaTime; } }
 
-    public Movement(float speed, float maxJumpHeight, float timeToJumpApex, float accelerationTimeAirborne, float accelerationTimeGrounded)
+    public Movement(
+        float speed, 
+        float maxJumpHeight, 
+        float timeToJumpApex, 
+        float wallStickTime,
+        float wallSlideSpeedMax,
+        Vector2 wallJumpClimb,
+        Vector2 wallJumpOff,
+        Vector2 wallLeap
+        )
     {
         this.speed = speed;
         this.maxJumpHeight = maxJumpHeight;
         this.timeToJumpApex = timeToJumpApex;
-        this.accelerationTimeAirborne = accelerationTimeAirborne;
-        this.accelerationTimeGrounded = accelerationTimeGrounded;
+        this.wallStickTime = wallStickTime;
+        this.wallSlideSpeedMax = wallSlideSpeedMax;
+        this.wallJumpClimb = wallJumpClimb;
+        this.wallJumpOff = wallJumpOff;
+        this.wallLeap = wallLeap;
 
         gravity = -2 * maxJumpHeight / Mathf.Pow(timeToJumpApex, 2);
         gravityDown = gravity * 2;
@@ -71,18 +87,86 @@ public class Movement
         targetVelocityX = h * speed;
     }
 
-    public Vector3 CalculateDeltaPosition(float acceleration, float fixedDeltaTime)
+
+    public Vector3 CalculateVelocity(float fixedDeltaTime, float y)
+    {
+        if (!reachedApex && maxHeightReached > y)
+        {
+            // Used ONLY for Debugging
+            float delta = maxHeightReached - startHeight;
+            float error = maxJumpHeight - delta;
+            // There is no error calculation when jump is not full. Aka, space bar is lifted up before reaching apex
+            Debug.Log("Jump Result: startHeight:" + Math.Round(startHeight, 4) + ", maxHeightReached:" + Math.Round(maxHeightReached, 4) + ", delta:" + Math.Round(delta, 4) + ", error:" + Math.Round(error, 4) + ", jumpTimer:" + deltaTime + ", gravity:" + gravity + ", jumpForce:" + jumpForce + "\n\n");
+
+
+            reachedApex = true;
+            gravity = gravityDown;
+        }
+        maxHeightReached = Mathf.Max(y, maxHeightReached);
+
+        velocity.y += gravity * fixedDeltaTime;
+        Vector3 deltaPosition = (prevVelocity + velocity) * 0.5f * fixedDeltaTime;
+        return deltaPosition;
+    }
+
+    public void CalculateVelocityX(float x, float acceleration)
     {
         prevVelocity = velocity;
+
+        targetVelocityX = x * speed;
 
         velocity.x = Mathf.SmoothDamp(
             velocity.x,
             targetVelocityX,
             ref velocityXSmoothing,
             acceleration);
-        velocity.y += gravity * fixedDeltaTime;
-        Vector3 deltaPosition = (prevVelocity + velocity) * 0.5f * fixedDeltaTime;
-        return deltaPosition;
+
+    }
+
+    public void CalculateWallSlide(float x, int wallDirX, float fixedDeltaTime)
+    {
+        if (velocity.y < -wallSlideSpeedMax)
+        {
+            velocity.y = -wallSlideSpeedMax;
+        }
+
+        if (timeToWallUnstick > 0)
+        {
+            velocityXSmoothing = 0;
+            velocity.x = 0;
+
+            if (x != wallDirX && x != 0)
+            {
+                timeToWallUnstick -= fixedDeltaTime;
+            }
+            else
+            {
+                timeToWallUnstick = wallStickTime;
+            }
+        }
+        else
+        {
+            timeToWallUnstick = wallStickTime;
+        }
+    }
+
+    public void CalculateWallJump(float x, int wallDirX)
+    {
+        if (wallDirX == x)
+        {
+            velocity.x = -wallDirX * wallJumpClimb.x;
+            velocity.y = wallJumpClimb.y;
+        }
+        else if (x == 0)
+        {
+            velocity.x = -wallDirX * wallJumpOff.x;
+            velocity.y = wallJumpOff.y;
+        }
+        else
+        {
+            velocity.x = -wallDirX * wallLeap.x;
+            velocity.y = wallLeap.y;
+        }
     }
 
     public void DoubleGravity()

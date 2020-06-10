@@ -21,7 +21,14 @@ public class Player : MonoBehaviour
     [SerializeField] private Vector2 wallJumpOff;
     [SerializeField] private Vector2 wallLeap;
     [SerializeField] private float wallStickTime = 0.25f;
-    private float timeToWallUnstick;
+
+    private Input input;
+    private enum Input
+    {
+        SpaceUp,
+        SpaceDown,
+        None
+    }
 
     //[SerializeField] private Text gravityText = null;
     //[SerializeField] private Text jumpVelocityText = null;
@@ -50,8 +57,11 @@ public class Player : MonoBehaviour
             moveSpeed, 
             maxJumpHeight, 
             timeToJumpApex,
-            accelerationTimeAirborne,
-            accelerationTimeGrounded
+            wallStickTime,
+            wallSlideSpeedMax,
+            wallJumpClimb,
+            wallJumpOff,
+            wallLeap
             );
 
         if (UnityService == null)
@@ -66,49 +76,26 @@ public class Player : MonoBehaviour
     void Update()
     {
         float inputX = UnityService.GetAxisRaw("Horizontal");
-        movement.CalculateUpdate(
-                inputX,
-                transform.position.y);
-
         int wallDirX = (controller.Collisions.left) ? -1 : 1;
-        
+
+        movement.CalculateVelocityX(
+            inputX,
+            (controller.Collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborne
+            );
+
         bool wallSliding = false;
         if ((controller.Collisions.left || controller.Collisions.right) && !controller.Collisions.below && movement.Velocity.y < 0)
         {
             wallSliding = true;
-
-            if (movement.Velocity.y < -wallSlideSpeedMax)
-            {
-                movement.setVelocityY(-wallSlideSpeedMax);
-            }
-        }
-
-        //if (controller.Collisions.above || controller.Collisions.below)
-        //{
-        //    movement.ZeroVelocityY();
-        //}
-
-        if (UnityService.GetKeyUp(KeyCode.Space))
-        {
-            movement.DoubleGravity();
+            movement.CalculateWallSlide(inputX, wallDirX, UnityService.GetFixedDeltaTime());
         }
 
         if (UnityService.GetKeyDown(KeyCode.Space))
         {
             if (wallSliding)
-            {
-                if (wallDirX == inputX)
-                {
-                    movement.Velocity = new Vector3(-wallDirX * wallJumpClimb.x, wallJumpClimb.y);
-                }
-                else if (inputX == 0)
-                {
-                    movement.Velocity = new Vector3(-wallDirX * wallJumpOff.x, wallJumpOff.y);
-                }
-                else
-                {
-                    movement.Velocity = new Vector3(-wallDirX * wallLeap.x, wallLeap.y);
-                }
+            { 
+                movement.CalculateWallJump(inputX, wallDirX);
+
             }
             if (controller.Collisions.below)
             {
@@ -116,23 +103,15 @@ public class Player : MonoBehaviour
             }
         }
 
-
-    }
-
-    // Movement and Physics dependent variables should exist here because
-    // FixedUpdate (fixedDeltaTime) is called at a predictable interval which gives us 
-    // independence from FPS and maintians predictability/reliability across multiple devices
-    void FixedUpdate()
-    {
-        if (!controller.Collisions.below && !movement.ReachedApex)
+        if (UnityService.GetKeyUp(KeyCode.Space))
         {
-            movement.DeltaTime += UnityService.GetFixedDeltaTime();
+            movement.DoubleGravity();
         }
 
         controller.Move(
-            movement.CalculateDeltaPosition(
-                    (controller.Collisions.below) ? accelerationTimeGrounded : accelerationTimeAirborne,
-                    UnityService.GetFixedDeltaTime()
+            movement.CalculateVelocity(
+                    UnityService.GetFixedDeltaTime(),
+                    transform.position.y
                 )
             );
 
@@ -141,11 +120,5 @@ public class Player : MonoBehaviour
         {
             movement.ZeroVelocityY();
         }
-
-        //// Removes the continuous collision force left/right
-        //if (controller.Collisions.left || controller.Collisions.right)
-        //{
-        //    velocity.x = 0;
-        //}
     }
 }
