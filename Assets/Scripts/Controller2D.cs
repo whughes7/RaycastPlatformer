@@ -14,6 +14,11 @@ public class Controller2D : RaycastController
     private CollisionInfo collisions;
     public CollisionInfo Collisions { get { return collisions; } }
 
+    public override void Start()
+    {
+        base.Start();
+        collisions.faceDir = 1;
+    }
 
     public static Controller2D CreateController(GameObject playerObj, LayerMask collisionMask)
     {
@@ -28,14 +33,16 @@ public class Controller2D : RaycastController
         collisions.Reset();
         collisions.moveDistanceOld = moveDistance;
 
+        if (moveDistance.x != 0)
+        {
+            collisions.faceDir = (int)Mathf.Sign(moveDistance.x);
+        }
+
         if (moveDistance.y < 0)
         {
             DescendSlope(ref moveDistance);
         }
-        if (moveDistance.x != 0)
-        {
-            HorizontalCollisions(ref moveDistance);
-        }
+        HorizontalCollisions(ref moveDistance);
         if (moveDistance.y != 0)
         {
             VerticalCollisions(ref moveDistance);
@@ -53,8 +60,14 @@ public class Controller2D : RaycastController
     // Changes in this method effect moveDistance Move method
     void HorizontalCollisions(ref Vector3 moveDistance)
     {
-        float directionX = Mathf.Sign(moveDistance.x);
+        float directionX = collisions.faceDir;
         float rayLength = Mathf.Abs(moveDistance.x) + SkinWidth;
+
+        // Change to detect wall sliding
+        if (Mathf.Abs(moveDistance.x) < SkinWidth)
+        {
+            rayLength = 2 * SkinWidth;
+        }
 
         for (int i = 0; i < HorizontalRayCount; i++)
         {
@@ -269,6 +282,7 @@ public class Controller2D : RaycastController
         // Avoid edge case where, steep down slope meets climbing slope
         // Avoid slowing down in V collision
         public Vector3 moveDistanceOld;
+        public int faceDir;
 
         public void Reset()
         {

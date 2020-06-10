@@ -8,6 +8,9 @@ public class Movement
     private Vector3 prevVelocity;
     private Vector3 velocity;
     public Vector3 Velocity { get { return velocity; } set { velocity = value; } }
+    public void setVelocityY(float velocityY) { velocity.y = velocityY; }
+    public void setVelocityX(float velocityX) { velocity.x = velocityX; }
+    
     private float maxJumpHeight;
 
     // Determined by maxJumpHeight, timeToJumpApex

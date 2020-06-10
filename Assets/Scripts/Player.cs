@@ -16,8 +16,12 @@ public class Player : MonoBehaviour
     // X Velocity Smoothing Variables
     [SerializeField] private float accelerationTimeAirborne = 0.2f; // 0.2f
     [SerializeField] private float accelerationTimeGrounded = 0.1f; // 0.1f
-
-
+    [SerializeField] private float wallSlideSpeedMax = 3;
+    [SerializeField] private Vector2 wallJumpClimb;
+    [SerializeField] private Vector2 wallJumpOff;
+    [SerializeField] private Vector2 wallLeap;
+    [SerializeField] private float wallStickTime = 0.25f;
+    private float timeToWallUnstick;
 
     //[SerializeField] private Text gravityText = null;
     //[SerializeField] private Text jumpVelocityText = null;
@@ -61,19 +65,57 @@ public class Player : MonoBehaviour
     // Update is called more frequently than FixedUpdate()
     void Update()
     {
+        float inputX = UnityService.GetAxisRaw("Horizontal");
+        movement.CalculateUpdate(
+                inputX,
+                transform.position.y);
+
+        int wallDirX = (controller.Collisions.left) ? -1 : 1;
+        
+        bool wallSliding = false;
+        if ((controller.Collisions.left || controller.Collisions.right) && !controller.Collisions.below && movement.Velocity.y < 0)
+        {
+            wallSliding = true;
+
+            if (movement.Velocity.y < -wallSlideSpeedMax)
+            {
+                movement.setVelocityY(-wallSlideSpeedMax);
+            }
+        }
+
+        //if (controller.Collisions.above || controller.Collisions.below)
+        //{
+        //    movement.ZeroVelocityY();
+        //}
+
         if (UnityService.GetKeyUp(KeyCode.Space))
         {
             movement.DoubleGravity();
         }
 
-        if (UnityService.GetKeyDown(KeyCode.Space) && controller.Collisions.below)
+        if (UnityService.GetKeyDown(KeyCode.Space))
         {
-            movement.Jump(transform.position.y);
+            if (wallSliding)
+            {
+                if (wallDirX == inputX)
+                {
+                    movement.Velocity = new Vector3(-wallDirX * wallJumpClimb.x, wallJumpClimb.y);
+                }
+                else if (inputX == 0)
+                {
+                    movement.Velocity = new Vector3(-wallDirX * wallJumpOff.x, wallJumpOff.y);
+                }
+                else
+                {
+                    movement.Velocity = new Vector3(-wallDirX * wallLeap.x, wallLeap.y);
+                }
+            }
+            if (controller.Collisions.below)
+            {
+                movement.Jump(transform.position.y);
+            }
         }
 
-        movement.CalculateUpdate(
-                UnityService.GetAxisRaw("Horizontal"),
-                transform.position.y);
 
     }
 
